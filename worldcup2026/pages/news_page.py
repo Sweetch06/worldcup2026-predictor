@@ -7,7 +7,16 @@ import requests
 from datetime import datetime, timedelta
 from utils.ui import inject_css, page_header, require_login, svg_icon
 
-NEWSAPI_KEY = os.environ.get("NEWSAPI_KEY", "")
+def _get_api_key() -> str:
+    """Read the NewsAPI key lazily — covers both .env (os.environ) and
+    Streamlit Cloud secrets (st.secrets), regardless of import order."""
+    key = os.environ.get("NEWSAPI_KEY", "")
+    if key:
+        return key
+    try:
+        return str(st.secrets.get("NEWSAPI_KEY", ""))
+    except Exception:
+        return ""
 
 # (display label) -> (API query string, required keywords for client-side filtering)
 CATEGORIES = {
@@ -60,7 +69,8 @@ STATIC_ARTICLES = [
 
 @st.cache_data(ttl=600)
 def _fetch_news(query: str) -> list[dict]:
-    if not NEWSAPI_KEY:
+    api_key = _get_api_key()
+    if not api_key:
         return []
     try:
         from_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -70,7 +80,7 @@ def _fetch_news(query: str) -> list[dict]:
             "language": "en",
             "pageSize": 30,
             "from": from_date,
-            "apiKey": NEWSAPI_KEY,
+            "apiKey": api_key,
         }
         r = requests.get("https://newsapi.org/v2/everything", params=params, timeout=8)
         return r.json().get("articles", [])
@@ -144,7 +154,7 @@ def render():
     require_login()
     page_header("NEWS", "Latest World Cup & national team updates")
 
-    if not NEWSAPI_KEY:
+    if not _get_api_key():
         st.info(
             "🌐 **Live news** requires a free NewsAPI key — add `NEWSAPI_KEY=your_key` to `.env`. "
             "Get one free at [newsapi.org](https://newsapi.org). Showing curated links for now."
