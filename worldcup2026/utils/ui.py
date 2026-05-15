@@ -578,62 +578,28 @@ def render_top_bar():
         for c in _get_tournament_context()
     )
 
-    go_dash = st.button("__go_dashboard__", key="_topbar_db")
-    if go_dash:
-        st.session_state.nav = "Dashboard"
-        st.rerun()
-
-    open_profile = st.button("__open_profile__", key="_topbar_pf")
-    if open_profile:
-        st.session_state["show_profile_modal"] = not st.session_state.get("show_profile_modal", False)
-        st.rerun()
-
-    st.markdown(f"""
-    <div class="wc-top-bar">
-        <div class="wc-top-bar-left" onclick="(function(){{
-            for(var b of document.querySelectorAll('button')){{
-                if(b.innerText.trim()==='__go_dashboard__'){{b.click();break;}}
-            }}
-        }})()">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                stroke="#F2C14E" stroke-width="2">
-                <polyline points="6 9 6 2 18 2 18 9"/>
-                <path d="M6 18H4a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-2"/>
-                <rect x="6" y="18" width="12" height="4"/>
-            </svg>
-            <div>
-                <div class="wc-top-bar-brand">WORLD CUP 2026</div>
-                <div class="wc-top-bar-tagline">PREDICTOR</div>
-            </div>
-        </div>
-        <div class="wc-top-bar-center">{chips_html}</div>
-        <div class="wc-top-bar-right">
-            <span style="color:var(--text-muted);font-size:0.78rem;font-weight:500;">{username}</span>
-            <div class="wc-avatar-btn" onclick="(function(){{
-                for(var b of document.querySelectorAll('button')){{
-                    if(b.innerText.trim()==='__open_profile__'){{b.click();break;}}
-                }}
-            }})()" title="Profile settings">
-                {avatar_svg}
-            </div>
-        </div>
-    </div>
-    <script>
-    (function(){{
-        function hide(){{
-            for(var b of document.querySelectorAll('button')){{
-                if(b.innerText.trim()==='__go_dashboard__'||b.innerText.trim()==='__open_profile__'){{
-                    b.style.display='none';
-                    if(b.parentElement)b.parentElement.style.display='none';
-                    var gp=b.parentElement&&b.parentElement.parentElement;
-                    if(gp)gp.style.display='none';
-                }}
-            }}
-        }}
-        hide();setTimeout(hide,200);setTimeout(hide,700);
-    }})();
-    </script>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="wc-top-bar">'
+        f'<div class="wc-top-bar-left">'
+        f'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" '
+        f'stroke="#F2C14E" stroke-width="2">'
+        f'<polyline points="6 9 6 2 18 2 18 9"/>'
+        f'<path d="M6 18H4a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-2"/>'
+        f'<rect x="6" y="18" width="12" height="4"/>'
+        f'</svg>'
+        f'<div>'
+        f'<div class="wc-top-bar-brand">WORLD CUP 2026</div>'
+        f'<div class="wc-top-bar-tagline">PREDICTOR</div>'
+        f'</div>'
+        f'</div>'
+        f'<div class="wc-top-bar-center">{chips_html}</div>'
+        f'<div class="wc-top-bar-right">'
+        f'<span style="color:var(--text-muted);font-size:0.78rem;font-weight:500;">{username}</span>'
+        f'<div class="wc-avatar-btn" title="Open the Profile tab in the sidebar to edit">{avatar_svg}</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     if st.session_state.get("show_profile_modal"):
         _render_profile_modal(user)

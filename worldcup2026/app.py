@@ -65,9 +65,12 @@ button[title="View fullscreen"] {display: none !important;}
 [data-testid="stSidebarNavItems"] {display: none !important;}
 section[data-testid="stSidebar"] ul {display: none !important;}
 
-/* ── Sidebar collapse button — always visible ── */
-[data-testid="collapsedControl"] {display: flex !important;}
-[data-testid="stSidebarCollapseButton"] {display: flex !important;}
+/* ── Sidebar collapse / expand controls — always visible ── */
+[data-testid="collapsedControl"] {display: flex !important; visibility: visible !important;}
+[data-testid="stSidebarCollapseButton"] {display: flex !important; visibility: visible !important;}
+[data-testid="stSidebarCollapsedControl"] {display: flex !important; visibility: visible !important;}
+[data-testid="stExpandSidebarButton"] {display: flex !important; visibility: visible !important;}
+button[kind="header"] {display: flex !important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -291,6 +294,10 @@ with st.sidebar:
     )
 
     st.divider()
+
+    if st.button("⚙  Profile Settings", key="profile_btn", use_container_width=True):
+        st.session_state.show_profile_modal = not st.session_state.get("show_profile_modal", False)
+        st.rerun()
 
     if st.button("Sign Out", key="signout_btn", use_container_width=True):
         st.session_state.user               = None
