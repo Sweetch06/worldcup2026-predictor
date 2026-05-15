@@ -504,71 +504,11 @@ code {
     display:inline-block;
 }
 
-/* ── Top App Bar ── */
-.wc-top-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 99998;
-    height: 52px;
-    background: rgba(11,13,17,0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    gap: 16px;
-}
-.wc-top-bar-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    transition: color 0.15s;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-}
-.wc-top-bar-left:hover { color: var(--text); background: var(--hover); }
-.wc-top-bar-logo {
-    font-size: 1.1rem;
-    color: var(--primary);
-}
-.wc-top-bar-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.wc-top-bar-username {
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    font-weight: 500;
-}
-.wc-top-bar-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--surface2);
-    border: 1px solid var(--border-lt);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    line-height: 1;
-}
-/* Push page content down to clear the fixed top bar */
-[data-testid="stAppViewContainer"] > .main {
-    padding-top: 52px !important;
-}
+/* ── Top bar lives in normal page flow (rendered via st.columns inside
+       render_top_bar) so there's no fixed positioning that could overlap
+       the sidebar expand button at the top-left. ── */
 .block-container {
-    padding-top: 1.25rem !important;
+    padding-top: 0.75rem !important;
 }
 
 /* ── Quick-nav cards on dashboard ── */
@@ -759,25 +699,58 @@ def inject_css():
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 
 def render_top_bar():
-    """Render a fixed top app bar — visual only (no ghost buttons).
-    Dashboard navigation is via the sidebar."""
+    """Inline top bar: clickable Dashboard button + user/avatar on the right.
+    Lives in normal page flow (not fixed) so it doesn't overlap the sidebar
+    expand button in the top-left corner."""
     user = st.session_state.get("user")
     if not user:
         return
-    username = user.get("username", "")
-    avatar   = user.get("avatar_emoji", "⚽")
+    username   = user.get("username", "")
+    avatar_lbl = user.get("avatar_emoji", "Ball")
+    avatar_svg = get_avatar_svg(avatar_lbl, size=28)
 
+    # Scoped CSS for the inline top bar (button styling + right-side layout)
+    st.markdown("""
+        <style>
+        div[data-testid="stHorizontalBlock"]:has(> div > div > div > [data-testid="stButton"] > button[kind="secondary"][data-testid*="topbar_dash"]) {
+            margin-bottom: 6px;
+        }
+        button[data-testid="topbar_dash_btn"],
+        [data-testid="stButton"] > button[key="topbar_dash_btn"] {
+            background: transparent !important;
+            border: 1px solid var(--border) !important;
+            color: var(--text-muted) !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.4px !important;
+        }
+        button[data-testid="topbar_dash_btn"]:hover {
+            color: var(--text) !important;
+            border-color: var(--primary) !important;
+            background: var(--hover) !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    col_dash, col_spacer, col_user = st.columns([3, 6, 3])
+    with col_dash:
+        if st.button("🏆  Dashboard", key="topbar_dash_btn", use_container_width=True):
+            st.session_state.nav = "Dashboard"
+            st.rerun()
+    with col_user:
+        st.markdown(
+            f'<div style="display:flex;align-items:center;justify-content:flex-end;'
+            f'gap:10px;height:38px;padding-right:4px;">'
+            f'<span style="color:var(--text-muted);font-size:0.82rem;'
+            f'font-weight:500;">{username}</span>'
+            f'<div style="width:36px;height:36px;border-radius:50%;'
+            f'background:var(--surface2);border:1px solid var(--border-lt);'
+            f'display:flex;align-items:center;justify-content:center;">'
+            f'{avatar_svg}</div></div>',
+            unsafe_allow_html=True,
+        )
     st.markdown(
-        f'<div class="wc-top-bar" id="wc-top-bar">'
-        f'<div class="wc-top-bar-left">'
-        f'<span class="wc-top-bar-logo">🏆</span>'
-        f'<span>Dashboard</span>'
-        f'</div>'
-        f'<div class="wc-top-bar-right">'
-        f'<span class="wc-top-bar-username">{username}</span>'
-        f'<div class="wc-top-bar-avatar">{avatar}</div>'
-        f'</div>'
-        f'</div>',
+        '<hr style="margin:6px 0 14px 0;border:none;'
+        'border-top:1px solid var(--border);opacity:0.6;">',
         unsafe_allow_html=True,
     )
 

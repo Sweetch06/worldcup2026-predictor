@@ -113,8 +113,6 @@ def render():
                             f"""<div style="background:{bg};border:{border};border-radius:10px;
                                 padding:10px;text-align:center;cursor:pointer;margin-bottom:4px;">
                                 <div style="width:44px;height:44px;margin:0 auto;">{svg}</div>
-                                <div style="font-size:0.65rem;color:var(--text-muted);
-                                    margin-top:4px;">{lbl}</div>
                             </div>""",
                             unsafe_allow_html=True,
                         )
