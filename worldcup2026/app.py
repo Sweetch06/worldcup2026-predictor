@@ -60,6 +60,11 @@ footer {visibility: hidden !important;}
 .viewerBadge_container__1QSob {display: none !important;}
 button[title="View fullscreen"] {display: none !important;}
 
+/* ── Hide auto-generated multi-page nav (we use a custom radio nav) ── */
+[data-testid="stSidebarNav"] {display: none !important;}
+[data-testid="stSidebarNavItems"] {display: none !important;}
+section[data-testid="stSidebar"] ul {display: none !important;}
+
 /* ── Sidebar collapse button — always visible ── */
 [data-testid="collapsedControl"] {display: flex !important;}
 [data-testid="stSidebarCollapseButton"] {display: flex !important;}

@@ -117,30 +117,26 @@ def _article_card(article: dict):
         img_html = (f'<img src="{image}" style="width:100%;height:140px;object-fit:cover;'
                     f'border-radius:8px 8px 0 0;" onerror="this.style.display=\'none\'" />')
 
-    st.markdown(f"""
-        <a href="{url}" target="_blank" style="text-decoration:none;">
-        <div style="background:var(--surface2);border:1px solid var(--border);
-            border-radius:var(--radius);overflow:hidden;margin-bottom:12px;
-            transition:border-color 0.2s,transform 0.2s;box-shadow:var(--shadow-sm);"
-            onmouseover="this.style.borderColor='#B71C1C';this.style.transform='translateY(-2px)'"
-            onmouseout="this.style.borderColor='var(--border)';this.style.transform='translateY(0)'">
-            {img_html}
-            <div style="padding:14px 16px;">
-                <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;
-                    display:flex;justify-content:space-between;">
-                    <span style="color:var(--primary);font-weight:600;">{source_name}</span>
-                    <span>{date_str}</span>
-                </div>
-                <div style="font-size:0.9rem;font-weight:600;color:var(--text);
-                    line-height:1.4;margin-bottom:8px;">{title}</div>
-                <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.5;">{description}</div>
-                <div style="margin-top:10px;font-size:0.72rem;color:var(--primary);
-                    font-weight:600;display:flex;align-items:center;gap:4px;">
-                    {svg_icon("link", 12, "#B71C1C")} Read more
-                </div>
-            </div>
-        </div>
-        </a>""", unsafe_allow_html=True)
+    st.markdown(
+        f'<a href="{url}" target="_blank" style="text-decoration:none;">'
+        f'<div style="background:var(--surface2);border:1px solid var(--border);'
+        f'border-radius:var(--radius);overflow:hidden;margin-bottom:12px;'
+        f'box-shadow:var(--shadow-sm);">'
+        f'{img_html}'
+        f'<div style="padding:14px 16px;">'
+        f'<div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;'
+        f'display:flex;justify-content:space-between;">'
+        f'<span style="color:var(--primary);font-weight:600;">{source_name}</span>'
+        f'<span>{date_str}</span>'
+        f'</div>'
+        f'<div style="font-size:0.9rem;font-weight:600;color:var(--text);'
+        f'line-height:1.4;margin-bottom:8px;">{title}</div>'
+        f'<div style="font-size:0.78rem;color:var(--text-muted);line-height:1.5;">{description}</div>'
+        f'<div style="margin-top:10px;font-size:0.72rem;color:var(--primary);'
+        f'font-weight:600;">{svg_icon("link", 12, "#B71C1C")} Read more</div>'
+        f'</div></div></a>',
+        unsafe_allow_html=True,
+    )
 
 
 def render():
@@ -150,9 +146,8 @@ def render():
 
     if not NEWSAPI_KEY:
         st.info(
-            f"{svg_icon('globe', 14, '#1565C0')} &nbsp;"
-            "**Live news** requires a free NewsAPI key — add `NEWSAPI_KEY=your_key` to `.env`. "
-            "Get one free at [newsapi.org](https://newsapi.org). Showing curated links for now.",
+            "🌐 **Live news** requires a free NewsAPI key — add `NEWSAPI_KEY=your_key` to `.env`. "
+            "Get one free at [newsapi.org](https://newsapi.org). Showing curated links for now."
         )
 
     # If teams page sent us a team name via session state, pre-fill search

@@ -34,12 +34,12 @@ def render():
 
     is_owner = room["owner_id"] == user["id"]
     if not is_owner:
-        st.warning(f"{_ic('warning',16,'#FFA500')} Only the room owner can access admin tools.")
+        st.warning("⚠️ Only the room owner can access admin tools.")
         st.info("Contact the room owner to trigger scoring or sync data.")
         _show_readonly_stats(room)
         return
 
-    st.success(f"{_ic('crown',16,'#FFD700')} You are the room owner. Full admin access granted.")
+    st.success("👑 You are the room owner. Full admin access granted.")
 
     tab_sync, tab_score, tab_wc2022, tab_members, tab_export = st.tabs([
         "Data Sync",
@@ -54,7 +54,7 @@ def render():
     with tab_sync:
         st.subheader("Sync Match Data from API")
         st.markdown("Pull the latest match results and team data from the football API.")
-        st.info(f"{_ic('bulb',14,'#FFD700')} Data is automatically cached for 1–24 hours to respect API rate limits.")
+        st.info("💡 Data is automatically cached for 1–24 hours to respect API rate limits.")
 
         col1, col2 = st.columns(2)
         with col1:
@@ -62,7 +62,7 @@ def render():
                 with st.spinner("Fetching match data from API…"):
                     with get_db() as db:
                         sync_matches_to_db(db)
-                st.success(f"{_ic('check',14,'#22c55e')} Match data synced successfully!")
+                st.success("✅ Match data synced successfully!")
                 st.rerun()
         with col2:
             if st.button("Clear API Cache", use_container_width=True):
@@ -100,7 +100,7 @@ def render():
                     finished = (db.query(Match)
                         .filter(Match.status == "FINISHED", Match.result.isnot(None)).all())
                     total_scored = sum(score_match_predictions(db, m) for m in finished)
-                st.success(f"{_ic('check',14,'#22c55e')} Scored {total_scored} match predictions.")
+                st.success(f"✅ Scored {total_scored} match predictions.")
                 st.rerun()
 
         with col2:
@@ -111,7 +111,7 @@ def render():
                 if st.button("Score Group Standings", use_container_width=True):
                     with get_db() as db:
                         n = score_group_standings(db, selected_group, room["id"])
-                    st.success(f"{_ic('check',14,'#22c55e')} Scored {n} group standing predictions for Group {selected_group}.")
+                    st.success(f"✅ Scored {n} group standing predictions for Group {selected_group}.")
                     st.rerun()
             else:
                 st.info("No completed groups to score yet.")
@@ -128,7 +128,7 @@ def render():
             if st.button("Award Winner Points (15 pts)", use_container_width=True):
                 with get_db() as db:
                     n = score_tournament_winner(db, team_options[winner_team], room["id"])
-                st.success(f"{_ic('check',14,'#22c55e')} Awarded winner points to {n} prediction(s).")
+                st.success(f"✅ Awarded winner points to {n} prediction(s).")
                 st.rerun()
 
         st.markdown("---")
@@ -136,7 +136,7 @@ def render():
         if st.button("Recalculate All Room Points", use_container_width=True):
             with get_db() as db:
                 recalculate_all_points(db, room["id"])
-            st.success(f"{_ic('check',14,'#22c55e')} All point totals recalculated.")
+            st.success("✅ All point totals recalculated.")
             st.rerun()
 
         st.markdown("---")
@@ -159,8 +159,8 @@ def render():
     with tab_wc2022:
         st.subheader("World Cup 2022 — Qatar")
         st.markdown(
-            f"""
-            {_ic('globe',16,'#60a5fa')} Load **real World Cup 2022 data** (Qatar) into the database.
+            """
+            🌐 Load **real World Cup 2022 data** (Qatar) into the database.
             All 64 matches with authentic results — split across all scoring categories:
             group stage, knockouts, and tournament winner. You can predict on everything as if it's live.
             """
@@ -210,12 +210,12 @@ def render():
                 )
 
         st.markdown("---")
-        st.warning(f"{_ic('warning',14,'#FFA500')} This will clear existing match/team data and replace it with WC 2022 data.")
+        st.warning("⚠️ This will clear existing match/team data and replace it with WC 2022 data.")
 
         if st.button("Load World Cup 2022 Data", use_container_width=True):
             with st.spinner("Loading WC 2022 data…"):
                 _insert_wc2022_data()
-            st.success(f"{_ic('check',14,'#22c55e')} World Cup 2022 data loaded! Go to Matches or Predictions to explore.")
+            st.success("✅ World Cup 2022 data loaded! Go to Matches or Predictions to explore.")
             st.rerun()
 
         st.markdown("---")
@@ -223,7 +223,7 @@ def render():
         st.caption("Run all scoring engines against the real 2022 results to award points to predictions already submitted.")
         if st.button("Score All WC 2022 Predictions", use_container_width=True):
             _score_wc2022(room["id"])
-            st.success(f"{_ic('check',14,'#22c55e')} All WC 2022 predictions scored.")
+            st.success("✅ All WC 2022 predictions scored.")
             st.rerun()
 
     # ── MEMBERS ──────────────────────────────────────────
@@ -247,7 +247,7 @@ def render():
             st.info("No members yet.")
         else:
             for i, m in enumerate(member_users, 1):
-                crown = f" {_ic('crown',14,'#FFD700')}" if m["is_owner"] else ""
+                crown = " 👑" if m["is_owner"] else ""
                 st.markdown(
                     f"""<div style="display:flex;align-items:center;gap:14px;
                         background:rgba(0,0,0,0.18);border-radius:10px;
