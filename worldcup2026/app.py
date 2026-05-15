@@ -52,19 +52,26 @@ st.set_page_config(
 st.markdown("""
 <style>
 #MainMenu {visibility: hidden !important;}
-/* Keep the header element alive so the sidebar expand arrow can render in it.
-   Just hide its background and the toolbar children we don't want. */
+/* Force header + toolbar VISIBLE so the sidebar expand button (which lives
+   inside the toolbar) can render. Only hide the specific chrome we don't want. */
 header[data-testid="stHeader"] {
     background: transparent !important;
+    display: flex !important;
+    visibility: visible !important;
     z-index: 999 !important;
 }
-footer {visibility: hidden !important;}
-[data-testid="stToolbar"] {display: none !important;}
+[data-testid="stToolbar"] {
+    display: flex !important;
+    visibility: visible !important;
+    background: transparent !important;
+}
+[data-testid="stToolbarActions"] {display: none !important;}
 [data-testid="stDeployButton"] {display: none !important;}
 [data-testid="stDecoration"] {display: none !important;}
 [data-testid="stStatusWidget"] {display: none !important;}
 .viewerBadge_container__1QSob {display: none !important;}
 button[title="View fullscreen"] {display: none !important;}
+footer {visibility: hidden !important;}
 
 /* ── Hide auto-generated multi-page nav (we use a custom radio nav) ── */
 [data-testid="stSidebarNav"] {display: none !important;}
