@@ -71,12 +71,24 @@ button[title="View fullscreen"] {display: none !important;}
 [data-testid="stSidebarNavItems"] {display: none !important;}
 section[data-testid="stSidebar"] ul {display: none !important;}
 
-/* ── Sidebar collapse / expand controls — always visible ── */
-[data-testid="collapsedControl"] {display: flex !important; visibility: visible !important;}
-[data-testid="stSidebarCollapseButton"] {display: flex !important; visibility: visible !important;}
-[data-testid="stSidebarCollapsedControl"] {display: flex !important; visibility: visible !important;}
-[data-testid="stExpandSidebarButton"] {display: flex !important; visibility: visible !important;}
-button[kind="header"] {display: flex !important;}
+/* ── Sidebar collapse / expand controls — always visible on top of everything ── */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stExpandSidebarButton"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 999999 !important;
+}
+[data-testid="stExpandSidebarButton"] {
+    position: fixed !important;
+    top: 0.5rem !important;
+    left: 0.5rem !important;
+    background: rgba(20, 22, 30, 0.9) !important;
+    border-radius: 8px !important;
+    padding: 4px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
