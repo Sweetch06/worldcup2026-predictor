@@ -79,25 +79,19 @@ header[data-testid="stHeader"],
     background: transparent !important;
 }
 
-/* ── Sidebar collapse toggle — ALWAYS visible, even when collapsed ── */
-/* Cast a wide net across all Streamlit versions */
+/* ── Sidebar collapse/expand buttons — ALWAYS visible ── */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stExpandSidebarButton"],
 [data-testid="collapsedControl"],
 [data-testid="stSidebarCollapsedControl"],
 section[data-testid="stSidebarCollapsedControl"],
-div[data-testid="collapsedControl"],
 button[aria-label="open sidebar"],
 button[aria-label="Open sidebar"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    pointer-events: all !important;
-    z-index: 99999 !important;
-}
-[data-testid="collapsedControl"] svg,
-[data-testid="stSidebarCollapsedControl"] svg,
-section[data-testid="stSidebarCollapsedControl"] svg {
-    stroke: #9AA3B2 !important;
-    fill: none !important;
+    pointer-events: auto !important;
+    z-index: 999999 !important;
 }
 
 /* ── Main content area: app-like centered shell ── */
@@ -763,121 +757,29 @@ def ordinal(n):
 
 def inject_css():
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
-    # Inject JS that adds a persistent style tag to document.head
-    # This reaches elements outside the Streamlit app iframe/shadow scope
-    st.markdown("""
-        <script>
-        (function() {
-            var styleId = 'wc-sidebar-fix';
-            if (document.getElementById(styleId)) return;
-            var style = document.createElement('style');
-            style.id = styleId;
-            style.textContent = `
-                [data-testid="collapsedControl"],
-                [data-testid="stSidebarCollapsedControl"],
-                section[data-testid="stSidebarCollapsedControl"],
-                button[aria-label="open sidebar"],
-                button[aria-label="Open sidebar"] {
-                    display: flex !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                    pointer-events: all !important;
-                    z-index: 99999 !important;
-                }
-            `;
-            document.head.appendChild(style);
-
-            // Also poll every 500ms in case Streamlit rerenders
-            setInterval(function() {
-                var el = document.querySelector(
-                    '[data-testid="collapsedControl"], ' +
-                    '[data-testid="stSidebarCollapsedControl"], ' +
-                    'button[aria-label="open sidebar"]'
-                );
-                if (el) {
-                    el.style.setProperty('display', 'flex', 'important');
-                    el.style.setProperty('visibility', 'visible', 'important');
-                    el.style.setProperty('opacity', '1', 'important');
-                    el.style.setProperty('pointer-events', 'all', 'important');
-                }
-            }, 500);
-        })();
-        </script>
-    """, unsafe_allow_html=True)
 
 def render_top_bar():
-    """Render a fixed top app bar with Dashboard link on the left and user profile on the right."""
+    """Render a fixed top app bar — visual only (no ghost buttons).
+    Dashboard navigation is via the sidebar."""
     user = st.session_state.get("user")
-    username = user["username"] if user else ""
-    avatar = user.get("avatar_emoji", "⚽") if user else "⚽"
+    if not user:
+        return
+    username = user.get("username", "")
+    avatar   = user.get("avatar_emoji", "⚽")
 
-    # Hidden Streamlit button that JS will click when the Dashboard label is pressed
-    go_dashboard = st.button("__go_dashboard__", key="_topbar_dashboard_btn")
-    if go_dashboard:
-        st.session_state.nav = "Dashboard"
-        st.rerun()
-
-    st.markdown(f"""
-        <style>
-        /* Hide the hidden trigger button */
-        div[data-testid="stVerticalBlock"]:has(> div > [data-testid="stButton"] > button[kind="primary"])
-            [data-testid="stButton"] > button[title=""] {{
-            display: none !important;
-        }}
-        /* Target our specific hidden button by its text content */
-        </style>
-        <style>
-        ._topbar_dashboard_btn_wrapper {{ display: none !important; }}
-        </style>
-        <div class="wc-top-bar" id="wc-top-bar">
-            <div class="wc-top-bar-left" onclick="
-                (function() {{
-                    // Find and click the hidden Streamlit button
-                    var btns = document.querySelectorAll('button');
-                    for (var b of btns) {{
-                        if (b.innerText.trim() === '__go_dashboard__') {{
-                            b.click(); break;
-                        }}
-                    }}
-                }})()
-            ">
-                <span class="wc-top-bar-logo">🏆</span>
-                <span>Dashboard</span>
-            </div>
-            <div class="wc-top-bar-right">
-                <span class="wc-top-bar-username">{username}</span>
-                <div class="wc-top-bar-avatar">{avatar}</div>
-            </div>
-        </div>
-        <style>
-        /* Hide the hidden trigger button completely */
-        button:has(> div > p:first-child) {{ }}
-        [data-testid="stVerticalBlock"] > div:first-child:has(button) {{
-        }}
-        </style>
-    """, unsafe_allow_html=True)
-
-    # Hide the __go_dashboard__ button via JS
-    st.markdown("""
-        <script>
-        (function() {
-            function hideBtn() {
-                var btns = document.querySelectorAll('button');
-                for (var b of btns) {
-                    if (b.innerText.trim() === '__go_dashboard__') {
-                        b.style.setProperty('display', 'none', 'important');
-                        if (b.parentElement) b.parentElement.style.setProperty('display', 'none', 'important');
-                        if (b.parentElement && b.parentElement.parentElement)
-                            b.parentElement.parentElement.style.setProperty('display', 'none', 'important');
-                    }
-                }
-            }
-            hideBtn();
-            setTimeout(hideBtn, 200);
-            setTimeout(hideBtn, 600);
-        })();
-        </script>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="wc-top-bar" id="wc-top-bar">'
+        f'<div class="wc-top-bar-left">'
+        f'<span class="wc-top-bar-logo">🏆</span>'
+        f'<span>Dashboard</span>'
+        f'</div>'
+        f'<div class="wc-top-bar-right">'
+        f'<span class="wc-top-bar-username">{username}</span>'
+        f'<div class="wc-top-bar-avatar">{avatar}</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
 def page_header(title, subtitle="", eyebrow=""):
     """Modern page header with optional eyebrow tag and gradient underline accent."""
