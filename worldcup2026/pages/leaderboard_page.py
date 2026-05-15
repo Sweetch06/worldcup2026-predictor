@@ -5,7 +5,7 @@ import streamlit as st
 import pandas as pd
 from database import get_db
 from scoring import get_leaderboard
-from utils.ui import inject_css, page_header, require_login, require_room
+from utils.ui import inject_css, page_header, require_login, require_room, get_avatar_svg
 
 
 def render():
@@ -51,7 +51,7 @@ def render():
                         <span style="font-size:1.2rem;min-width:36px;font-weight:700;">
                             {rank_label}
                         </span>
-                        <span style="font-size:1.3rem;">{entry['avatar_emoji']}</span>
+                        <span style="display:inline-flex;align-items:center;">{get_avatar_svg(entry['avatar_emoji'], 24)}</span>
                         <div>
                             <div style="font-weight:700;font-size:0.95rem;">
                                 {entry['username']}
@@ -105,7 +105,7 @@ def _render_podium(top: list[dict]):
         with col:
             st.markdown(
                 f"""<div style="text-align:center;">
-                    <div style="font-size:2rem;">{entry['avatar_emoji']}</div>
+                    <div style="display:flex;justify-content:center;">{get_avatar_svg(entry['avatar_emoji'], 38)}</div>
                     <div style="font-weight:700;font-size:0.88rem;">{entry['username']}</div>
                     <div style="color:#D4AF37;font-weight:800;font-size:1.3rem;
                         font-family:'Bebas Neue',sans-serif;">{entry['total_points']:.0f} pts</div>

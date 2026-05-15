@@ -10,7 +10,7 @@ from scoring import (
     score_tournament_winner, recalculate_all_points, get_leaderboard,
 )
 from api.football_api import sync_matches_to_db, _fallback_teams
-from utils.ui import inject_css, page_header, require_login, require_room
+from utils.ui import inject_css, page_header, require_login, require_room, get_avatar_svg
 from utils.svg_icons import icon
 from utils.wc2022_data import (
     WC2022_TEAMS, GROUP_MATCHES, KNOCKOUT_MATCHES,
@@ -146,11 +146,16 @@ def render():
         if lb:
             for entry in lb:
                 st.markdown(
-                    f"**#{entry['rank']}** {entry['avatar_emoji']} {entry['username']} — "
-                    f"**{entry['total_points']:.0f} pts** "
-                    f"_(Matches: {entry['match_points']:.0f} | "
-                    f"Groups: {entry['group_points']:.0f} | "
-                    f"Winner: {entry['winner_points']:.0f})_"
+                    f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">'
+                    f'<b>#{entry["rank"]}</b>'
+                    f'{get_avatar_svg(entry["avatar_emoji"], 22)}'
+                    f'<span>{entry["username"]}</span>'
+                    f'<span style="color:var(--text-muted);">— '
+                    f'<b>{entry["total_points"]:.0f} pts</b> '
+                    f'<i>(Matches: {entry["match_points"]:.0f} | '
+                    f'Groups: {entry["group_points"]:.0f} | '
+                    f'Winner: {entry["winner_points"]:.0f})</i></span></div>',
+                    unsafe_allow_html=True,
                 )
         else:
             st.info("No scored predictions yet.")

@@ -11,6 +11,27 @@ from datetime import datetime
 GLOBAL_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── FORCE DARK MODE — override OS / browser light-mode preference ── */
+:root, html, body, [data-testid="stApp"] {
+    color-scheme: dark !important;
+}
+@media (prefers-color-scheme: light) {
+    html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"],
+    [data-testid="stMain"], .main, .block-container {
+        background-color: #0B0D11 !important;
+        color: #F5F7FA !important;
+    }
+    /* Force dark surfaces for any Streamlit widget that picks up light tokens */
+    .stTextInput input, .stTextArea textarea, .stNumberInput input,
+    .stDateInput input, .stSelectbox [data-baseweb="select"] > div,
+    [data-testid="stSidebar"] {
+        background-color: #1A1E26 !important;
+        color: #F5F7FA !important;
+        border-color: #262C36 !important;
+    }
+}
+
 :root {
     /* Brand */
     --primary:#E11D2E;        /* FIFA crimson */
@@ -504,11 +525,10 @@ code {
     display:inline-block;
 }
 
-/* ── Top bar lives in normal page flow (rendered via st.columns inside
-       render_top_bar) so there's no fixed positioning that could overlap
-       the sidebar expand button at the top-left. ── */
+/* ── Pull content up to remove the blank Streamlit space ── */
 .block-container {
-    padding-top: 0.75rem !important;
+    padding-top: 0rem !important;
+    margin-top: -3.5rem !important;
 }
 
 /* ── Quick-nav cards on dashboard ── */
@@ -699,60 +719,20 @@ def inject_css():
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 
 def render_top_bar():
-    """Inline top bar: clickable Dashboard button + user/avatar on the right.
-    Lives in normal page flow (not fixed) so it doesn't overlap the sidebar
-    expand button in the top-left corner."""
+    """Inline top bar: User profile on the right and a bottom border."""
     user = st.session_state.get("user")
     if not user:
         return
+    
     username   = user.get("username", "")
     avatar_lbl = user.get("avatar_emoji", "Ball")
-    avatar_svg = get_avatar_svg(avatar_lbl, size=28)
+    avatar_svg = get_avatar_svg(avatar_lbl, size=20) 
 
-    # Scoped CSS for the inline top bar (button styling + right-side layout)
-    st.markdown("""
-        <style>
-        div[data-testid="stHorizontalBlock"]:has(> div > div > div > [data-testid="stButton"] > button[kind="secondary"][data-testid*="topbar_dash"]) {
-            margin-bottom: 6px;
-        }
-        button[data-testid="topbar_dash_btn"],
-        [data-testid="stButton"] > button[key="topbar_dash_btn"] {
-            background: transparent !important;
-            border: 1px solid var(--border) !important;
-            color: var(--text-muted) !important;
-            font-weight: 600 !important;
-            letter-spacing: 0.4px !important;
-        }
-        button[data-testid="topbar_dash_btn"]:hover {
-            color: var(--text) !important;
-            border-color: var(--primary) !important;
-            background: var(--hover) !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # By putting this entirely on one line, Streamlit cannot accidentally render it as a code block.
+    # We use justify-content: flex-end to push the profile to the right.
+    html_str = f'<div style="display:flex; justify-content:flex-end; align-items:center; padding:5px 0px 15px 0px; margin-bottom:25px; border-bottom:1px solid var(--border);"><div style="display:flex; align-items:center; gap:12px;"><span style="color:#9AA3B2; font-size:0.9rem; font-weight:500;">{username}</span><div style="width:36px; height:36px; border-radius:50%; background:#1A1E26; border:1px solid #39414F; display:flex; align-items:center; justify-content:center;">{avatar_svg}</div></div></div>'
 
-    col_dash, col_spacer, col_user = st.columns([3, 6, 3])
-    with col_dash:
-        if st.button("🏆  Dashboard", key="topbar_dash_btn", use_container_width=True):
-            st.session_state.nav = "Dashboard"
-            st.rerun()
-    with col_user:
-        st.markdown(
-            f'<div style="display:flex;align-items:center;justify-content:flex-end;'
-            f'gap:10px;height:38px;padding-right:4px;">'
-            f'<span style="color:var(--text-muted);font-size:0.82rem;'
-            f'font-weight:500;">{username}</span>'
-            f'<div style="width:36px;height:36px;border-radius:50%;'
-            f'background:var(--surface2);border:1px solid var(--border-lt);'
-            f'display:flex;align-items:center;justify-content:center;">'
-            f'{avatar_svg}</div></div>',
-            unsafe_allow_html=True,
-        )
-    st.markdown(
-        '<hr style="margin:6px 0 14px 0;border:none;'
-        'border-top:1px solid var(--border);opacity:0.6;">',
-        unsafe_allow_html=True,
-    )
+    st.markdown(html_str, unsafe_allow_html=True)
 
 def page_header(title, subtitle="", eyebrow=""):
     """Modern page header with optional eyebrow tag and gradient underline accent."""

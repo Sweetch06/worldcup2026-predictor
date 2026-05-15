@@ -8,11 +8,9 @@ from database import get_db
 from models import Match, Team, MatchStage, RoomMember, User as UserModel
 from scoring import get_leaderboard, STAGE_POINTS, get_prediction_completion, get_match_prediction_stats
 from utils.ui import inject_css, page_header, require_login, format_kickoff, \
-    match_result_badge, stage_badge, points_badge, flag_emoji, svg_icon, get_avatar_svg
-from utils.predictions import upsert_match_prediction, get_user_match_predictions, \
-    get_winner_prediction, upsert_winner_prediction
+    match_result_badge, stage_badge, points_badge, svg_icon, get_avatar_svg
+from utils.predictions import upsert_match_prediction, get_user_match_predictions
 from utils.deadline import is_prediction_open, prediction_deadline_label
-from api.football_api import _fallback_teams
 
 WC_START = date(2026, 6, 11)
 WC_END   = date(2026, 7, 19)
@@ -56,10 +54,6 @@ def _load_user_preds(user_id, room_id) -> dict:
 def _load_leaderboard(room_id) -> list[dict]:
     with get_db() as db:
         return get_leaderboard(db, room_id)
-
-def _load_winner_pred(user_id, room_id):
-    with get_db() as db:
-        return get_winner_prediction(db, user_id, room_id)
 
 def _load_completion(user_id, room_id) -> dict:
     with get_db() as db:
@@ -304,118 +298,88 @@ def render():
                 </div>
             """, unsafe_allow_html=True)
 
-        # ── Winner pick ───────────────────────────────────────────────
-        st.markdown(f'<h3 style="margin:20px 0 10px 0;">{svg_icon("trophy",18,"#D4AF37")} Winner Pick</h3>',
-                    unsafe_allow_html=True)
-        teams      = _fallback_teams()
-        team_by_id = {t["id"]: t["name"] for t in teams}
-        t_options  = {t["name"]: t["id"] for t in sorted(teams, key=lambda x: x["name"])}
-        cur_id     = _load_winner_pred(user["id"], room["id"])
-        cur_name   = team_by_id.get(cur_id)
-
-        if cur_name:
-            st.markdown(f"""
-                <div style="background:var(--surface2);border:1px solid var(--secondary);
-                    border-radius:var(--radius);padding:14px;text-align:center;margin-bottom:10px;">
-                    <div style="color:var(--secondary);font-size:0.68rem;font-weight:700;
-                        letter-spacing:1px;">YOUR PICK</div>
-                    <div style="font-size:2rem;margin:6px 0;">{flag_emoji(cur_name)}</div>
-                    <div style="font-weight:700;">{cur_name}</div>
-                    <div style="color:var(--text-muted);font-size:0.75rem;">Worth 15 points</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        with st.expander("Change pick" if cur_name else "Pick tournament winner"):
-            idx = list(t_options.keys()).index(cur_name) if cur_name in t_options else 0
-            sel = st.selectbox("Winner", list(t_options.keys()), index=idx,
-                               key="dash_winner_select")
-            if st.button("Save Pick", key="dash_winner_save"):
-                with get_db() as db:
-                    ok, msg = upsert_winner_prediction(db, user["id"], room["id"], t_options[sel])
-                if ok:
-                    st.success(msg)
-                    st.rerun()
-                else:
-                    st.error(msg)
+        # Winner pick lives only on the Predictions page now.
 
 
 # ── Helper components ─────────────────────────────────────────────────
 
 def _render_quick_nav(user):
-    """Dashboard quick-navigation — pure Streamlit buttons styled as icon cards."""
+    """Dashboard quick-navigation — 3x2 grid with descriptions."""
+    # Added descriptions to each tuple
     nav_items = [
-        ("Predictions", "Predictions", "📋"),
-        ("Matches",     "Matches",     "⚽"),
-        ("Leaderboard", "Leaderboard", "🏆"),
-        ("Teams",       "Teams",   "👥"),
-        ("Rooms",       "Rooms",     "🏠"),
-        ("News",        "News",  "📰"),
+        ("Predictions", "Predictions", "📋", "Submit your match & group picks"),
+        ("Matches",     "Matches",     "⚽", "View fixtures and live scores"),
+        ("Leaderboard", "Leaderboard", "🏆", "Check your ranking in the room"),
+        ("Teams",       "Teams",       "👥", "Browse team profiles and stats"),
+        ("Rooms",       "Rooms",       "🏠", "Manage or join prediction rooms"),
+        ("News",        "News",        "📰", "Latest World Cup updates"),
     ]
     if user.get("is_admin"):
-        nav_items.append(("Admin", "Admin", "⚙️"))
-
-    # Build CSS selectors for each button key
-    key_selectors = ", ".join(
-        f'button[data-testid="baseButton-secondary"][aria-label="{label}"]'
-        for _, label, _ in nav_items
-    )
-    # Also target by surrounding element — using the element index approach
-    qnav_keys = [f"qnav_{page}" for page, _, _ in nav_items]
+        nav_items.append(("Admin", "Admin", "⚙️", "Manage data and settings"))
 
     st.markdown("""
         <style>
-        /* Quick-nav card buttons */
-        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"]
-            > [data-testid="stVerticalBlock"] > [data-testid="stButton"] > button {
+        /* Quick-nav card buttons - Expanded for 3x2 Grid */
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] [data-testid="stButton"] > button {
             background: var(--surface2) !important;
             border: 1px solid var(--border) !important;
             border-radius: var(--radius) !important;
             box-shadow: none !important;
-            color: var(--text) !important;
-            font-size: 1.5rem !important;
-            font-weight: 500 !important;
-            padding: 16px 8px 12px 8px !important;
-            min-height: 80px !important;
+            padding: 16px 20px !important;
+            min-height: 105px !important;
             width: 100% !important;
             display: flex !important;
             flex-direction: column !important;
-            align-items: center !important;
-            gap: 6px !important;
-            line-height: 1.3 !important;
-            letter-spacing: 0 !important;
+            align-items: flex-start !important; /* Left-align the text */
+            justify-content: center !important;
+            text-align: left !important;
+            line-height: 1.4 !important;
             transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.12s !important;
             white-space: pre-line !important;
         }
-        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"]
-            > [data-testid="stVerticalBlock"] > [data-testid="stButton"] > button p {
-            font-size: 0.72rem !important;
+        
+        /* The description text */
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] [data-testid="stButton"] > button p {
+            font-size: 0.8rem !important;
             color: var(--text-muted) !important;
             margin: 0 !important;
-            font-weight: 600 !important;
-            letter-spacing: 0.4px !important;
+            font-weight: 500 !important;
+            width: 100% !important;
         }
-        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"]
-            > [data-testid="stVerticalBlock"] > [data-testid="stButton"] > button:hover {
-            background: var(--surface3) !important;
-            border-color: var(--border-lt) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
+        
+        /* The Title (Targeting the Markdown bold tags we will add) */
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] [data-testid="stButton"] > button p strong {
+            font-size: 1.1rem !important;
             color: var(--text) !important;
+            display: block !important;
+            margin-bottom: 4px !important;
+        }
+        
+        /* Hover effect */
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] [data-testid="stButton"] > button:hover {
+            background: var(--surface3) !important;
+            border-color: var(--primary) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(225,29,46,0.25) !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    cols = st.columns(len(nav_items))
-    for i, (page, label, emoji) in enumerate(nav_items):
-        with cols[i]:
-            if st.button(
-                f"{emoji}\n{label}",
-                key=f"qnav_{page}",
-                use_container_width=True,
-                help=f"Ir para {label}",
-            ):
-                st.session_state.nav = page
-                st.rerun()
+    # Loop to create rows of 3 columns each
+    for i in range(0, len(nav_items), 3):
+        cols = st.columns(3)
+        for j in range(3):
+            if i + j < len(nav_items):
+                page, label, emoji, desc = nav_items[i + j]
+                with cols[j]:
+                    # We wrap the Title in **bold** so CSS can target it via the <strong> tag!
+                    if st.button(
+                        f"**{emoji} {label}**\n{desc}",
+                        key=f"qnav_{page}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.nav = page
+                        st.rerun()
 
     st.markdown("<div style='margin-bottom:12px;'></div>", unsafe_allow_html=True)
 
@@ -470,119 +434,3 @@ def _render_match_card(m, user, room, user_preds, stats, compact=False):
         status_label = "FULL TIME"
     elif m["status"] in ("IN_PLAY", "PAUSED"):
         score_str    = f"{m['home_score'] or 0} – {m['away_score'] or 0}"
-        status_color = "#E53935"
-        status_label = "● LIVE"
-    else:
-        score_str    = "vs"
-        status_color = "var(--text-muted)"
-        status_label = format_kickoff(m["kickoff_time"])
-
-    # Social prediction bar (Fix #5)
-    total_preds  = stats.get("total", 0)
-    member_label = f"{total_preds} prediction{'s' if total_preds != 1 else ''}" if total_preds else "No predictions yet"
-
-    # Deadline check (Fix #1)
-    open_pred, closed_reason = is_prediction_open(m, room) if room else (False, "No room")
-    deadline_lbl = prediction_deadline_label(m, room) if room else ""
-
-    # Prediction bar widths
-    if total_preds:
-        h_pct = stats.get("home", 0) / total_preds * 100
-        d_pct = stats.get("draw", 0) / total_preds * 100
-        a_pct = stats.get("away", 0) / total_preds * 100
-    else:
-        h_pct = d_pct = a_pct = 0
-
-    pred_bar = ""
-    if total_preds:
-        pred_bar = f"""
-        <div style="margin-top:10px;">
-            <div style="display:flex;height:4px;border-radius:2px;overflow:hidden;gap:2px;">
-                <div style="background:#B71C1C;width:{h_pct:.0f}%;border-radius:2px;"></div>
-                <div style="background:#B8960C;width:{d_pct:.0f}%;border-radius:2px;"></div>
-                <div style="background:#1565C0;width:{a_pct:.0f}%;border-radius:2px;"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;
-                font-size:0.65rem;color:var(--text-muted);margin-top:3px;">
-                <span>H {stats.get('home',0)}</span>
-                <span style="color:var(--text-dim);">{member_label}</span>
-                <span>A {stats.get('away',0)}</span>
-            </div>
-        </div>"""
-
-    your_pick_html = ""
-    if current_pred:
-        pick_labels = {"home": f"H: {home_name}", "draw": "Draw", "away": f"A: {away_name}"}
-        your_pick_html = f"""
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;">
-            Your pick: <strong style="color:var(--text);">{pick_labels.get(current_pred,'')}</strong>
-            &nbsp;{svg_icon("check",12,"#2E7D32")}
-        </div>"""
-
-    st.markdown(f"""
-        <div style="background:var(--surface2);border:1px solid var(--border);
-            border-radius:var(--radius);padding:16px;margin-bottom:10px;
-            box-shadow:var(--shadow-sm);">
-            <div style="display:flex;justify-content:space-between;
-                margin-bottom:10px;align-items:center;">
-                <div style="display:flex;gap:6px;align-items:center;">
-                    {stage_badge(m['stage'])}
-                    {"<span style='color:var(--text-muted);font-size:0.72rem;'>Group " + m['group_letter'] + "</span>" if m['group_letter'] else ""}
-                </div>
-                <div style="color:{status_color};font-size:0.75rem;font-weight:700;">
-                    {status_label}
-                </div>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div style="text-align:center;flex:1;">
-                    <div style="font-size:1.6rem;">{flag_emoji(home_name)}</div>
-                    <div style="font-weight:700;font-size:0.88rem;margin-top:2px;">{home_name}</div>
-                </div>
-                <div style="text-align:center;padding:0 14px;">
-                    <div style="font-size:1.5rem;font-weight:800;color:var(--text);">{score_str}</div>
-                    <div style="color:var(--text-dim);font-size:0.68rem;margin-top:2px;">
-                        {pts_worth} pt{'s' if pts_worth!=1 else ''}
-                    </div>
-                </div>
-                <div style="text-align:center;flex:1;">
-                    <div style="font-size:1.6rem;">{flag_emoji(away_name)}</div>
-                    <div style="font-weight:700;font-size:0.88rem;margin-top:2px;">{away_name}</div>
-                </div>
-            </div>
-            {f'<div style="margin-top:8px;text-align:center;">{match_result_badge(m["result"])}</div>' if m.get("result") else ""}
-            {your_pick_html}
-            {pred_bar}
-            {f'<div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px;">{svg_icon("clock",10,"#7A5050")} {deadline_lbl}</div>' if deadline_lbl and not compact else ""}
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Inline prediction (Fix #1 — only if open)
-    if room and not compact and m["status"] not in ("FINISHED",):
-        if open_pred:
-            options = {f"Home – {home_name}": "home", "Draw": "draw", f"Away – {away_name}": "away"}
-            labels  = list(options.keys())
-            rev     = {v: k for k, v in options.items()}
-            idx     = labels.index(rev[current_pred]) if current_pred and current_pred in rev else 0
-            c1, c2  = st.columns([4, 1])
-            with c1:
-                choice = st.radio("Prediction", labels, index=idx, horizontal=True,
-                                  label_visibility="collapsed",
-                                  key=f"dash_pred_{m['id']}_{room['id']}")
-            with c2:
-                if st.button("Save", key=f"dash_save_{m['id']}_{room['id']}"):
-                    with get_db() as db:
-                        ok, msg = upsert_match_prediction(
-                            db, user["id"], m["id"], room["id"], options[choice])
-                    if ok:
-                        st.toast("Prediction saved!")
-                        st.rerun()
-                    else:
-                        st.error(msg)
-        else:
-            st.markdown(f"""
-                <div style="font-size:0.78rem;color:var(--text-muted);padding:6px 0;
-                    display:flex;align-items:center;gap:6px;">
-                    {svg_icon("lock",14,"#7A5050")}
-                    <span style="color:var(--text-dim);">Predictions closed — {closed_reason}</span>
-                </div>
-            """, unsafe_allow_html=True)

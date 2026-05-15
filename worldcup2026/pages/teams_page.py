@@ -121,7 +121,8 @@ def _load_recent_form(team_id):
         recent = get_team_recent_matches(db, team_id, limit=5)
     results = []
     for m in recent:
-        hs, as_, ht = m.get("home_score"), m.get("away_score"), m.get("home_team", {})
+        hs, as_ = m.get("home_score"), m.get("away_score")
+        ht = m.get("home_team", {})
         if hs is None or as_ is None: continue
         is_home = ht.get("id") == team_id
         if hs == as_: results.append("D")
@@ -164,6 +165,39 @@ def _render_directory(teams):
                 st.rerun()
 
 def _render_profile(team):
+    # Injetamos o CSS aqui para evitar criar blocos vazios entre os títulos e os botões
+    st.markdown("""
+        <style>
+        button[kind="primary"] {
+            background: linear-gradient(135deg, #a63232 0%, #8c2a2a 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid #732222 !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.8px !important;
+            text-transform: uppercase !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+            transition: all 0.2s ease !important;
+            height: 80px !important;
+            min-height: 80px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin-top: 0px !important;
+        }
+        button[kind="primary"]:hover {
+            background: linear-gradient(135deg, #b83d3d 0%, #9e3131 100%) !important;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+            transform: translateY(-1px) !important;
+        }
+        button[kind="primary"] p {
+            color: #FFFFFF !important;
+            font-size: 1.05rem !important;
+            margin: 0 !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     if st.button("⬅️ Back to Directory", use_container_width=False):
         st.session_state.selected_team = None
         st.rerun()
@@ -199,31 +233,6 @@ def _render_profile(team):
         
     with col_news:
         st.markdown("<h4 style='margin-bottom:10px; color:var(--text);'>Media & Press</h4>", unsafe_allow_html=True)
-        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
-        
-        st.markdown("""
-        <style>
-        button[kind="primary"] {
-            background: linear-gradient(135deg, #a63232 0%, #8c2a2a 100%) !important;
-            color: #FFFFFF !important;
-            border: 1px solid #732222 !important;
-            border-radius: 8px !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.8px !important;
-            text-transform: uppercase !important;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
-            transition: all 0.2s ease !important;
-        }
-        button[kind="primary"]:hover {
-            background: linear-gradient(135deg, #b83d3d 0%, #9e3131 100%) !important;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
-            transform: translateY(-1px) !important;
-        }
-        button[kind="primary"] p {
-            color: #FFFFFF !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
         
         if st.button(f"ACCESS {t_name} NEWS", use_container_width=True, type="primary"):
             st.session_state.news_search_query = t_name

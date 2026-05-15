@@ -42,15 +42,30 @@ st.set_page_config(
     page_title="World Cup 2026 Predictor",
     page_icon=_trophy_icon,
     layout="wide",
-    initial_sidebar_state="collapsed", # Start collapsed for the login screen
+    initial_sidebar_state="expanded", # Arranca com a barra aberta
 )
 
-# ── Hide ALL Streamlit chrome: toolbar, hamburger, footer, deploy button ──
+# ── Force dark mode (override OS / browser light theme) + hide chrome ─
 st.markdown("""
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0D11">
 <style>
+:root { color-scheme: dark !important; }
+html, body, [data-testid="stApp"] {
+    background-color: #0B0D11 !important;
+    color: #F5F7FA !important;
+    color-scheme: dark !important;
+}
+@media (prefers-color-scheme: light) {
+    html, body, [data-testid="stApp"], [data-testid="stAppViewContainer"] {
+        background-color: #0B0D11 !important;
+        color: #F5F7FA !important;
+    }
+}
 #MainMenu {visibility: hidden !important;}
 footer {visibility: hidden !important;}
-/* Keep stHeader + stToolbar visible — they host the sidebar expand button */
+
+/* Keep stHeader visible — they host the sidebar expand button on mobile */
 header[data-testid="stHeader"] {
     background: transparent !important;
     display: flex !important;
@@ -62,39 +77,43 @@ header[data-testid="stHeader"] {
     visibility: visible !important;
     background: transparent !important;
 }
-[data-testid="stToolbarActions"] {display: none !important;}
-[data-testid="stDeployButton"] {display: none !important;}
-[data-testid="stDecoration"] {display: none !important;}
-[data-testid="stStatusWidget"] {display: none !important;}
-.viewerBadge_container__1QSob {display: none !important;}
-button[title="View fullscreen"] {display: none !important;}
+[data-testid="stToolbarActions"], [data-testid="stDeployButton"], 
+[data-testid="stDecoration"], [data-testid="stStatusWidget"], 
+.viewerBadge_container__1QSob, button[title="View fullscreen"] {
+    display: none !important;
+}
 
 /* Hide the default Streamlit page navigation list */
-[data-testid="stSidebarNav"] {display: none !important;}
-[data-testid="stSidebarNavItems"] {display: none !important;}
-section[data-testid="stSidebar"] ul {display: none !important;}
+[data-testid="stSidebarNav"], [data-testid="stSidebarNavItems"], 
+section[data-testid="stSidebar"] ul {
+    display: none !important;
+}
 
 /* Remove the empty space left behind at the top of the sidebar */
 section[data-testid="stSidebar"] > div > div:first-child {padding-top: 0rem !important;}
 
-/* Shift the main page content to the very top — reduce default Streamlit top padding */
+/* Shift the main page content to the very top */
 [data-testid="stMain"] .block-container,
 [data-testid="stMainBlockContainer"],
 section.main > div.block-container,
 .main .block-container {
-    padding-top: 1rem !important;
+    padding-top: 0rem !important;
+    margin-top: -3.5rem !important; /* This pulls everything up into the empty space */
     padding-bottom: 1rem !important;
     max-width: 100% !important;
 }
 
-/* Sidebar collapse / expand buttons — always visible */
-[data-testid="stSidebarCollapseButton"],
-[data-testid="stExpandSidebarButton"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    z-index: 999999 !important;
+/* 🎯 ANIQUILAR O BOTÃO DE FECHAR A BARRA NO COMPUTADOR */
+@media (min-width: 992px) {
+    [data-testid="stSidebarCollapseButton"], 
+    [data-testid="collapsedControl"] {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0px !important;
+        height: 0px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
 }
 </style>
 """, unsafe_allow_html=True)

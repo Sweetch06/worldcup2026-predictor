@@ -10,7 +10,7 @@ import streamlit as st
 from database import get_db
 from models import DeadlineType, User, Room
 from utils.rooms import create_room, join_room, get_user_rooms
-from utils.ui import inject_css, page_header, require_login
+from utils.ui import inject_css, page_header, require_login, get_avatar_svg
 from scoring import get_leaderboard
 
 DEADLINE_OPTIONS = {
@@ -233,7 +233,7 @@ def _render_room_card(room: dict, user: dict, active_room):
                         padding:8px 14px;margin-bottom:4px;
                         display:flex;justify-content:space-between;align-items:center;">
                         <span style="font-size:0.88rem;">
-                            {rank_label} &nbsp; {entry['avatar_emoji']} &nbsp;
+                            {rank_label} &nbsp; <span style="display:inline-flex;vertical-align:middle;">{get_avatar_svg(entry['avatar_emoji'], 22)}</span> &nbsp;
                             <b>{entry['username']}</b>
                             <span style="color:var(--primary);font-size:0.75rem;">{me_label}</span>
                         </span>
