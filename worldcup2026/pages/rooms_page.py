@@ -8,9 +8,9 @@ closes, so nothing can cause a DetachedInstanceError.
 
 import streamlit as st
 from database import get_db
-from models import DeadlineType, User, Room, RoomMember
+from models import DeadlineType, User, Room
 from utils.rooms import create_room, join_room, get_user_rooms
-from utils.ui import inject_css, page_header, require_login, get_avatar_svg
+from utils.ui import inject_css, page_header, require_login
 from scoring import get_leaderboard
 
 DEADLINE_OPTIONS = {
@@ -232,9 +232,8 @@ def _render_room_card(room: dict, user: dict, active_room):
                     <div style="background:{bg};border:{border};border-radius:8px;
                         padding:8px 14px;margin-bottom:4px;
                         display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:0.88rem;display:flex;align-items:center;gap:8px;">
-                            <span>{rank_label}</span>
-                            {get_avatar_svg(entry['avatar_emoji'], 22)}
+                        <span style="font-size:0.88rem;">
+                            {rank_label} &nbsp; {entry['avatar_emoji']} &nbsp;
                             <b>{entry['username']}</b>
                             <span style="color:var(--primary);font-size:0.75rem;">{me_label}</span>
                         </span>
@@ -253,35 +252,6 @@ def _render_room_card(room: dict, user: dict, active_room):
             st.markdown("---")
             st.markdown("**Room Settings** — owner only")
 
-            # Rename room
-            with st.form(f"rename_{room['id']}"):
-                new_name = st.text_input(
-                    "Room name",
-                    value=room["name"],
-                    key=f"rname_{room['id']}",
-                )
-                new_desc = st.text_area(
-                    "Description (optional)",
-                    value=room.get("description", ""),
-                    height=60,
-                    key=f"rdesc_{room['id']}",
-                )
-                rename_save = st.form_submit_button("Save Name / Description")
-
-            if rename_save:
-                new_name = new_name.strip()
-                if new_name:
-                    with get_db() as db:
-                        db_room = db.get(Room, room["id"])
-                        if db_room:
-                            db_room.name        = new_name
-                            db_room.description = new_desc.strip()
-                    st.success("Room renamed!")
-                    st.rerun()
-                else:
-                    st.error("Room name cannot be empty.")
-
-            # Deadline settings
             current_deadline_label = next(
                 (k for k, v in DEADLINE_OPTIONS.items() if v == room["deadline_type"]),
                 list(DEADLINE_OPTIONS.keys())[0],
@@ -302,7 +272,7 @@ def _render_room_card(room: dict, user: dict, active_room):
                         value=new_fixed_hours,
                         key=f"fh_{room['id']}",
                     )
-                save = st.form_submit_button("Save Deadline Settings")
+                save = st.form_submit_button("Save Settings")
 
             if save:
                 with get_db() as db:
@@ -312,37 +282,3 @@ def _render_room_card(room: dict, user: dict, active_room):
                         db_room.fixed_window_hours = int(new_fixed_hours)
                 st.success("Settings saved!")
                 st.rerun()
-
-            # Kick members
-            st.markdown("**Kick a member**")
-            with get_db() as db:
-                members_rows = (
-                    db.query(RoomMember, User)
-                      .join(User, RoomMember.user_id == User.id)
-                      .filter(RoomMember.room_id == room["id"],
-                              User.id != room["owner_id"])
-                      .all()
-                )
-                kick_options = {u.username: m.id for m, u in members_rows}
-
-            if kick_options:
-                with st.form(f"kick_{room['id']}"):
-                    kick_target = st.selectbox(
-                        "Select member to remove",
-                        options=list(kick_options.keys()),
-                        key=f"kick_sel_{room['id']}",
-                    )
-                    kick_confirm = st.form_submit_button(
-                        "Remove member", type="primary"
-                    )
-
-                if kick_confirm:
-                    member_id = kick_options[kick_target]
-                    with get_db() as db:
-                        db_member = db.get(RoomMember, member_id)
-                        if db_member:
-                            db.delete(db_member)
-                    st.success(f"Removed {kick_target} from the room.")
-                    st.rerun()
-            else:
-                st.caption("No other members to remove.")

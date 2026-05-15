@@ -9,8 +9,11 @@ from models import Match, Team, MatchStage, RoomMember, User as UserModel
 from scoring import get_leaderboard, STAGE_POINTS, get_prediction_completion, get_match_prediction_stats
 from utils.ui import inject_css, page_header, require_login, format_kickoff, \
     match_result_badge, stage_badge, points_badge, flag_emoji, svg_icon, get_avatar_svg
-from utils.predictions import upsert_match_prediction, get_user_match_predictions
+from utils.predictions import upsert_match_prediction, get_user_match_predictions, \
+    get_winner_prediction, upsert_winner_prediction
 from utils.deadline import is_prediction_open, prediction_deadline_label
+from api.football_api import _fallback_teams
+
 WC_START = date(2026, 6, 11)
 WC_END   = date(2026, 7, 19)
 
@@ -53,6 +56,10 @@ def _load_user_preds(user_id, room_id) -> dict:
 def _load_leaderboard(room_id) -> list[dict]:
     with get_db() as db:
         return get_leaderboard(db, room_id)
+
+def _load_winner_pred(user_id, room_id):
+    with get_db() as db:
+        return get_winner_prediction(db, user_id, room_id)
 
 def _load_completion(user_id, room_id) -> dict:
     with get_db() as db:
@@ -135,6 +142,7 @@ def render():
             st.rerun()
 
         # Still show points guide and upcoming matches
+        _render_quick_nav(user)
         _render_points_guide()
         return
 
@@ -145,6 +153,9 @@ def render():
     user_preds  = _load_user_preds(user["id"], room["id"])
     lb          = _load_leaderboard(room["id"])
     user_entry  = next((e for e in lb if e["user_id"] == user["id"]), None)
+
+    # ── Quick navigation ──────────────────────────────────────────────
+    _render_quick_nav(user)
 
     # ── Top stats row ─────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
@@ -232,7 +243,7 @@ def render():
         _render_points_guide()
 
     with col_side:
-        # ── Leaderboard preview ───────────────────────────────────────
+# ── Leaderboard preview ───────────────────────────────────────
         st.markdown(f'<h3 style="margin-bottom:12px;">{svg_icon("leaderboard",18,"#D4AF37")} {room["name"]}</h3>',
                     unsafe_allow_html=True)
         medals = {1: "🥇", 2: "🥈", 3: "🥉"}
@@ -241,53 +252,173 @@ def render():
             bg     = "var(--surface3)" if is_me else "var(--surface2)"
             border = "1px solid var(--primary)" if is_me else "1px solid var(--border)"
             medal  = medals.get(entry["rank"], f'#{entry["rank"]}')
+            
+            # Fetch the actual SVG image for the user
+            av_svg = get_avatar_svg(entry['avatar_emoji'], size=20)
+            
             st.markdown(f"""
                 <div style="background:{bg};border:{border};border-radius:var(--radius-sm);
                     padding:10px 14px;margin-bottom:5px;
                     display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:0.88rem;display:flex;align-items:center;gap:8px;">
+                    <div style="font-size:0.88rem;display:flex;align-items:center;gap:8px;">
                         <span>{medal}</span>
-                        {get_avatar_svg(entry['avatar_emoji'], 22)}
+                        <div style="display:flex;align-items:center;justify-content:center;">{av_svg}</div>
                         <span style="font-weight:{'700' if is_me else '400'};color:var(--text);">
                             {entry['username']}{'&nbsp;<span style="color:var(--primary);font-size:0.7rem;">(you)</span>' if is_me else ''}
                         </span>
-                    </span>
+                    </div>
                     <span style="color:var(--secondary);font-weight:700;">
                         {entry['total_points']:.0f}
                     </span>
                 </div>
             """, unsafe_allow_html=True)
+            
         if len(lb) > 5:
             if st.button("View full leaderboard →", use_container_width=True):
                 st.session_state.nav = "Leaderboard"
                 st.rerun()
 
-        # ── Room members (Fix #9) ─────────────────────────────────────
+# ── Room members (Fix #9) ─────────────────────────────────────
         st.markdown(f'<h3 style="margin:20px 0 10px 0;">{svg_icon("teams",18,"#B71C1C")} Members</h3>',
                     unsafe_allow_html=True)
         members = _load_members(room["id"])
         for m in members:
             is_me = m["user_id"] == user["id"]
-            comp_m = ""
+            
+            # Fetch the actual SVG image for the user
+            av_svg = get_avatar_svg(m['avatar_emoji'], size=22)
+            
             st.markdown(f"""
                 <div style="background:var(--surface2);border:1px solid var(--border);
                     border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:4px;
                     display:flex;align-items:center;justify-content:space-between;">
-                    <span style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">
-                        {get_avatar_svg(m['avatar_emoji'], 22)}
+                    <div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">
+                        <div style="display:flex;align-items:center;justify-content:center;">{av_svg}</div>
                         <span style="color:{'var(--text)' if is_me else 'var(--text-muted)'};
                             font-weight:{'600' if is_me else '400'};">{m['username']}</span>
                         {' <span style="color:var(--primary);font-size:0.7rem;">(you)</span>' if is_me else ''}
-                    </span>
-                    <span style="color:var(--secondary);font-size:0.8rem;font-weight:600;">
+                    </div>
+                    <div style="color:var(--secondary);font-size:0.8rem;font-weight:600;">
                         {m['total_points']:.0f} pts
-                    </span>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
 
+        # ── Winner pick ───────────────────────────────────────────────
+        st.markdown(f'<h3 style="margin:20px 0 10px 0;">{svg_icon("trophy",18,"#D4AF37")} Winner Pick</h3>',
+                    unsafe_allow_html=True)
+        teams      = _fallback_teams()
+        team_by_id = {t["id"]: t["name"] for t in teams}
+        t_options  = {t["name"]: t["id"] for t in sorted(teams, key=lambda x: x["name"])}
+        cur_id     = _load_winner_pred(user["id"], room["id"])
+        cur_name   = team_by_id.get(cur_id)
+
+        if cur_name:
+            st.markdown(f"""
+                <div style="background:var(--surface2);border:1px solid var(--secondary);
+                    border-radius:var(--radius);padding:14px;text-align:center;margin-bottom:10px;">
+                    <div style="color:var(--secondary);font-size:0.68rem;font-weight:700;
+                        letter-spacing:1px;">YOUR PICK</div>
+                    <div style="font-size:2rem;margin:6px 0;">{flag_emoji(cur_name)}</div>
+                    <div style="font-weight:700;">{cur_name}</div>
+                    <div style="color:var(--text-muted);font-size:0.75rem;">Worth 15 points</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with st.expander("Change pick" if cur_name else "Pick tournament winner"):
+            idx = list(t_options.keys()).index(cur_name) if cur_name in t_options else 0
+            sel = st.selectbox("Winner", list(t_options.keys()), index=idx,
+                               key="dash_winner_select")
+            if st.button("Save Pick", key="dash_winner_save"):
+                with get_db() as db:
+                    ok, msg = upsert_winner_prediction(db, user["id"], room["id"], t_options[sel])
+                if ok:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
 
 
 # ── Helper components ─────────────────────────────────────────────────
+
+def _render_quick_nav(user):
+    """Dashboard quick-navigation — pure Streamlit buttons styled as icon cards."""
+    nav_items = [
+        ("Predictions", "Predictions", "📋"),
+        ("Matches",     "Matches",     "⚽"),
+        ("Leaderboard", "Leaderboard", "🏆"),
+        ("Teams",       "Teams",   "👥"),
+        ("Rooms",       "Rooms",     "🏠"),
+        ("News",        "News",  "📰"),
+    ]
+    if user.get("is_admin"):
+        nav_items.append(("Admin", "Admin", "⚙️"))
+
+    # Build CSS selectors for each button key
+    key_selectors = ", ".join(
+        f'button[data-testid="baseButton-secondary"][aria-label="{label}"]'
+        for _, label, _ in nav_items
+    )
+    # Also target by surrounding element — using the element index approach
+    qnav_keys = [f"qnav_{page}" for page, _, _ in nav_items]
+
+    st.markdown("""
+        <style>
+        /* Quick-nav card buttons */
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"]
+            > [data-testid="stVerticalBlock"] > [data-testid="stButton"] > button {
+            background: var(--surface2) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: var(--radius) !important;
+            box-shadow: none !important;
+            color: var(--text) !important;
+            font-size: 1.5rem !important;
+            font-weight: 500 !important;
+            padding: 16px 8px 12px 8px !important;
+            min-height: 80px !important;
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 6px !important;
+            line-height: 1.3 !important;
+            letter-spacing: 0 !important;
+            transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.12s !important;
+            white-space: pre-line !important;
+        }
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"]
+            > [data-testid="stVerticalBlock"] > [data-testid="stButton"] > button p {
+            font-size: 0.72rem !important;
+            color: var(--text-muted) !important;
+            margin: 0 !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.4px !important;
+        }
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"]
+            > [data-testid="stVerticalBlock"] > [data-testid="stButton"] > button:hover {
+            background: var(--surface3) !important;
+            border-color: var(--border-lt) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
+            color: var(--text) !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    cols = st.columns(len(nav_items))
+    for i, (page, label, emoji) in enumerate(nav_items):
+        with cols[i]:
+            if st.button(
+                f"{emoji}\n{label}",
+                key=f"qnav_{page}",
+                use_container_width=True,
+                help=f"Ir para {label}",
+            ):
+                st.session_state.nav = page
+                st.rerun()
+
+    st.markdown("<div style='margin-bottom:12px;'></div>", unsafe_allow_html=True)
+
 
 def _stat_card(icon_html, value, label, sub):
     return f"""

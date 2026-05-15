@@ -62,7 +62,7 @@ def render():
                 with st.spinner("Fetching match data from API…"):
                     with get_db() as db:
                         sync_matches_to_db(db)
-                st.success("✅ Match data synced successfully!")
+                st.success(f"✅ Match data synced successfully!")
                 st.rerun()
         with col2:
             if st.button("Clear API Cache", use_container_width=True):
@@ -136,7 +136,7 @@ def render():
         if st.button("Recalculate All Room Points", use_container_width=True):
             with get_db() as db:
                 recalculate_all_points(db, room["id"])
-            st.success("✅ All point totals recalculated.")
+            st.success(f"✅ All point totals recalculated.")
             st.rerun()
 
         st.markdown("---")
@@ -159,11 +159,9 @@ def render():
     with tab_wc2022:
         st.subheader("World Cup 2022 — Qatar")
         st.markdown(
-            """
-            🌐 Load **real World Cup 2022 data** (Qatar) into the database.
-            All 64 matches with authentic results — split across all scoring categories:
-            group stage, knockouts, and tournament winner. You can predict on everything as if it's live.
-            """
+            "🌐 Load **real World Cup 2022 data** (Qatar) into the database. "
+            "All 64 matches with authentic results — split across all scoring categories: "
+            "group stage, knockouts, and tournament winner. You can predict on everything as if it's live."
         )
 
         col_a, col_b = st.columns(2)
@@ -215,7 +213,7 @@ def render():
         if st.button("Load World Cup 2022 Data", use_container_width=True):
             with st.spinner("Loading WC 2022 data…"):
                 _insert_wc2022_data()
-            st.success("✅ World Cup 2022 data loaded! Go to Matches or Predictions to explore.")
+            st.success(f"✅ World Cup 2022 data loaded! Go to Matches or Predictions to explore.")
             st.rerun()
 
         st.markdown("---")
@@ -223,7 +221,7 @@ def render():
         st.caption("Run all scoring engines against the real 2022 results to award points to predictions already submitted.")
         if st.button("Score All WC 2022 Predictions", use_container_width=True):
             _score_wc2022(room["id"])
-            st.success("✅ All WC 2022 predictions scored.")
+            st.success(f"✅ All WC 2022 predictions scored.")
             st.rerun()
 
     # ── MEMBERS ──────────────────────────────────────────

@@ -154,7 +154,7 @@ def render():
             filtered = [m for m in filtered if m["status"] == "FINISHED"]
         elif status_filter == "Live":
             filtered = [m for m in filtered if m["status"] in ("IN_PLAY", "PAUSED")]
-
+       
         st.markdown(f"<p style='color:var(--text-muted);margin-bottom:20px;'>Showing {len(filtered)} matches</p>", unsafe_allow_html=True)
 
         by_date = {}

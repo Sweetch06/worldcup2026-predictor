@@ -27,7 +27,6 @@ from database import init_db, get_db
 from api.football_api import sync_matches_to_db
 from utils.ui import inject_css, GLOBAL_CSS, svg_icon, get_avatar_svg
 from utils.auth import validate_session
-from utils.rooms import get_user_rooms
 
 from pages import auth_page, dashboard, matches_page, teams_page
 from pages import leaderboard_page, predictions_page, rooms_page, admin_page, news_page
@@ -43,17 +42,15 @@ st.set_page_config(
     page_title="World Cup 2026 Predictor",
     page_icon=_trophy_icon,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed", # Start collapsed for the login screen
 )
 
 # ── Hide ALL Streamlit chrome: toolbar, hamburger, footer, deploy button ──
-# Also locks the sidebar open: hides the collapse arrow and disables pointer
-# events on it so users cannot close the sidebar.
 st.markdown("""
 <style>
 #MainMenu {visibility: hidden !important;}
-/* Force header + toolbar VISIBLE so the sidebar expand button (which lives
-   inside the toolbar) can render. Only hide the specific chrome we don't want. */
+footer {visibility: hidden !important;}
+/* Keep stHeader + stToolbar visible — they host the sidebar expand button */
 header[data-testid="stHeader"] {
     background: transparent !important;
     display: flex !important;
@@ -71,30 +68,33 @@ header[data-testid="stHeader"] {
 [data-testid="stStatusWidget"] {display: none !important;}
 .viewerBadge_container__1QSob {display: none !important;}
 button[title="View fullscreen"] {display: none !important;}
-footer {visibility: hidden !important;}
 
-/* ── Hide auto-generated multi-page nav (we use a custom radio nav) ── */
+/* Hide the default Streamlit page navigation list */
 [data-testid="stSidebarNav"] {display: none !important;}
 [data-testid="stSidebarNavItems"] {display: none !important;}
 section[data-testid="stSidebar"] ul {display: none !important;}
 
-/* ── Sidebar collapse / expand controls — always visible on top of everything ── */
+/* Remove the empty space left behind at the top of the sidebar */
+section[data-testid="stSidebar"] > div > div:first-child {padding-top: 0rem !important;}
+
+/* Shift the main page content to the very top — reduce default Streamlit top padding */
+[data-testid="stMain"] .block-container,
+[data-testid="stMainBlockContainer"],
+section.main > div.block-container,
+.main .block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    max-width: 100% !important;
+}
+
+/* Sidebar collapse / expand buttons — always visible */
 [data-testid="stSidebarCollapseButton"],
 [data-testid="stExpandSidebarButton"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     pointer-events: auto !important;
-    position: relative !important;
     z-index: 999999 !important;
-}
-[data-testid="stExpandSidebarButton"] {
-    position: fixed !important;
-    top: 0.5rem !important;
-    left: 0.5rem !important;
-    background: rgba(20, 22, 30, 0.9) !important;
-    border-radius: 8px !important;
-    padding: 4px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -124,62 +124,52 @@ if "room" not in st.session_state:
     st.session_state.room = None
 if "nav" not in st.session_state:
     st.session_state.nav = "Dashboard"
-if "show_profile_modal" not in st.session_state:
-    st.session_state.show_profile_modal = False
 
 # ── Inject global CSS early ─────────────────────────────
 inject_css()
 
 # ── Auth gate ───────────────────────────────────────────
 if st.session_state.user is None:
+    # Ensure sidebar stays hidden on login page
+    st.markdown("<style>[data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
     auth_page.render()
     st.stop()
+
+# If we reached here, the user is logged in. 
+# We show the sidebar and ensure it's not hidden by the CSS above.
+st.markdown("<style>[data-testid='stSidebar'] {display: flex;}</style>", unsafe_allow_html=True)
 
 # Validate that the logged-in user still exists and is active in the DB
 with get_db() as _db:
     if not validate_session(_db):
         auth_page.render()
         st.stop()
-    # Auto-restore last room if session lost it (e.g. after page refresh)
-    if st.session_state.room is None and st.session_state.user:
-        try:
-            _rooms = get_user_rooms(_db, st.session_state.user["id"])
-            if _rooms:
-                r = _rooms[0]
-                st.session_state.room = {
-                    "id":                 r.id,
-                    "name":               r.name,
-                    "invite_code":        r.invite_code,
-                    "owner_id":           r.owner_id,
-                    "deadline_type":      r.deadline_type,
-                    "fixed_window_hours": r.fixed_window_hours or 24,
-                    "description":        r.description or "",
-                }
-        except Exception:
-            pass
 
 # ── Sidebar ─────────────────────────────────────────────
 user = st.session_state.user
 room = st.session_state.get("room")
 
-NAV_OPTIONS = ["🏠  Dashboard", "📋  Predictions", "⚽  Matches", "👥  Teams", "🏆  Leaderboard", "🚪  Rooms", "📰  News", "⚙️  Admin"]
-NAV_KEYS    = ["Dashboard",     "Predictions",     "Matches",    "Teams",    "Leaderboard",    "Rooms",    "News",    "Admin"]
+NAV_OPTIONS = ["Dashboard", "Predictions", "Matches", "Teams", "Leaderboard", "Rooms", "News"]
+
+# Convert the trophy.png to base64 so it can be used in the HTML
+import base64
+def get_trophy_b64():
+    if os.path.exists(_trophy_path):
+        with open(_trophy_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return None
+
+trophy_b64 = get_trophy_b64()
+if trophy_b64:
+    logo_html = f'<img src="data:image/png;base64,{trophy_b64}" style="width:64px;height:auto;filter:drop-shadow(0 4px 12px rgba(212,175,55,0.4));margin-bottom:10px;" />'
+else:
+    logo_html = '<div style="font-size:2.5rem;margin-bottom:10px;">🏆</div>'
 
 with st.sidebar:
     # ── Brand header ──
-    st.markdown("""
+    st.markdown(f"""
         <div style="text-align:center;padding:18px 0 10px 0;">
-            <div style="display:inline-flex;align-items:center;justify-content:center;
-                width:48px;height:48px;border-radius:14px;
-                background:linear-gradient(135deg,#E11D2E 0%,#B0121F 100%);
-                box-shadow:0 8px 22px rgba(225,29,46,0.45);margin-bottom:10px;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="#fff" stroke-width="2">
-                    <polyline points="6 9 6 2 18 2 18 9"/>
-                    <path d="M6 18H4a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-2"/>
-                    <rect x="6" y="18" width="12" height="4"/>
-                </svg>
-            </div>
+            {logo_html}
             <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;
                 letter-spacing:2.5px;color:#F5F7FA;line-height:1.1;">WORLD CUP 2026</div>
             <div style="color:#F2C14E;font-size:0.62rem;letter-spacing:2px;
@@ -291,23 +281,13 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 def update_nav():
-    raw = st.session_state.nav_radio
-    # Strip emoji prefix to get the clean page name
-    idx = NAV_OPTIONS.index(raw) if raw in NAV_OPTIONS else 0
-    st.session_state.nav = NAV_KEYS[idx]
-
-def _nav_label_for(page_name: str) -> str:
-    """Return the emoji-prefixed label for a given page key."""
-    try:
-        return NAV_OPTIONS[NAV_KEYS.index(page_name)]
-    except ValueError:
-        return NAV_OPTIONS[0]
+    st.session_state.nav = st.session_state.nav_radio
 
 if "nav_radio" not in st.session_state:
-    st.session_state.nav_radio = _nav_label_for(st.session_state.nav)
+    st.session_state.nav_radio = st.session_state.nav
 
-if _nav_label_for(st.session_state.nav) != st.session_state.nav_radio:
-    st.session_state.nav_radio = _nav_label_for(st.session_state.nav)
+if st.session_state.nav_radio != st.session_state.nav:
+    st.session_state.nav_radio = st.session_state.nav
 
 with st.sidebar:
     st.radio(
@@ -320,15 +300,10 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("⚙  Profile Settings", key="profile_btn", use_container_width=True):
-        st.session_state.show_profile_modal = not st.session_state.get("show_profile_modal", False)
-        st.rerun()
-
     if st.button("Sign Out", key="signout_btn", use_container_width=True):
-        st.session_state.user               = None
-        st.session_state.room               = None
-        st.session_state.nav                = "Dashboard"
-        st.session_state.show_profile_modal = False
+        st.session_state.user = None
+        st.session_state.room = None
+        st.session_state.nav  = "Dashboard"
         st.rerun()
 
     st.markdown("""

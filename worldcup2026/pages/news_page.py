@@ -1,6 +1,3 @@
-"""
-pages/news_page.py — World Cup news via NewsAPI with relevance filtering.
-"""
 import os
 import streamlit as st
 import requests
@@ -18,7 +15,6 @@ def _get_api_key() -> str:
     except Exception:
         return ""
 
-# (display label) -> (API query string, required keywords for client-side filtering)
 CATEGORIES = {
     "All World Cup":  ('"World Cup 2026" football',          ["world cup", "2026", "fifa"]),
     "Portugal":       ('Portugal "World Cup" football',      ["portugal"]),
@@ -36,7 +32,7 @@ CATEGORIES = {
 FOOTBALL_KEYWORDS = [
     "football", "soccer", "fifa", "world cup", "mundial", "goal", "match",
     "squad", "player", "coach", "manager", "tournament", "qualifier",
-    "national team", "selecção", "seleção", "futebol",
+    "national team"
 ]
 
 STATIC_ARTICLES = [
@@ -66,11 +62,9 @@ STATIC_ARTICLES = [
      "source": "FIFA Official", "publishedAt": "2026-03-15T00:00:00Z", "urlToImage": None},
 ]
 
-
 @st.cache_data(ttl=600)
 def _fetch_news(query: str) -> list[dict]:
-    api_key = _get_api_key()
-    if not api_key:
+    if not _get_api_key():
         return []
     try:
         from_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -80,13 +74,12 @@ def _fetch_news(query: str) -> list[dict]:
             "language": "en",
             "pageSize": 30,
             "from": from_date,
-            "apiKey": api_key,
+            "apiKey": _get_api_key(),
         }
         r = requests.get("https://newsapi.org/v2/everything", params=params, timeout=8)
         return r.json().get("articles", [])
     except Exception:
         return []
-
 
 def _is_relevant(article: dict, required_keywords: list) -> bool:
     text = " ".join([
@@ -103,7 +96,6 @@ def _is_relevant(article: dict, required_keywords: list) -> bool:
         return False
     return True
 
-
 def _article_card(article: dict):
     title       = article.get("title", "No title") or "No title"
     description = article.get("description", "") or ""
@@ -119,35 +111,38 @@ def _article_card(article: dict):
     except Exception:
         date_str = published[:10] if published else ""
 
-    if len(description) > 160:
-        description = description[:157] + "…"
-
-    img_html = ""
     if image:
         img_html = (f'<img src="{image}" style="width:100%;height:140px;object-fit:cover;'
-                    f'border-radius:8px 8px 0 0;" onerror="this.style.display=\'none\'" />')
+                    f'border-radius:8px 8px 0 0;" onerror="this.src=\'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=\';this.style.height=\'140px\';this.style.background=\'var(--surface3)\'" />')
+    else:
+        img_html = '<div style="width:100%;height:140px;background:var(--surface3);border-radius:8px 8px 0 0;"></div>'
 
-    st.markdown(
-        f'<a href="{url}" target="_blank" style="text-decoration:none;">'
-        f'<div style="background:var(--surface2);border:1px solid var(--border);'
-        f'border-radius:var(--radius);overflow:hidden;margin-bottom:12px;'
-        f'box-shadow:var(--shadow-sm);">'
-        f'{img_html}'
-        f'<div style="padding:14px 16px;">'
-        f'<div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;'
-        f'display:flex;justify-content:space-between;">'
-        f'<span style="color:var(--primary);font-weight:600;">{source_name}</span>'
-        f'<span>{date_str}</span>'
-        f'</div>'
-        f'<div style="font-size:0.9rem;font-weight:600;color:var(--text);'
-        f'line-height:1.4;margin-bottom:8px;">{title}</div>'
-        f'<div style="font-size:0.78rem;color:var(--text-muted);line-height:1.5;">{description}</div>'
-        f'<div style="margin-top:10px;font-size:0.72rem;color:var(--primary);'
-        f'font-weight:600;">{svg_icon("link", 12, "#B71C1C")} Read more</div>'
-        f'</div></div></a>',
-        unsafe_allow_html=True,
-    )
-
+    st.markdown(f"""
+        <a href="{url}" target="_blank" style="text-decoration:none;">
+        <div style="background:var(--surface2);border:1px solid var(--border);
+            border-radius:var(--radius);overflow:hidden;margin-bottom:12px;
+            transition:border-color 0.2s,transform 0.2s;box-shadow:var(--shadow-sm);"
+            onmouseover="this.style.borderColor='#B71C1C';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.transform='translateY(0)'">
+            {img_html}
+            <div style="padding:14px 16px;">
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;
+                    display:flex;justify-content:space-between;align-items:center;">
+                    <span style="color:var(--primary);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;">{source_name}</span>
+                    <span style="white-space:nowrap;">{date_str}</span>
+                </div>
+                <div style="font-size:0.9rem;font-weight:600;color:var(--text);
+                    line-height:1.4;margin-bottom:8px;height:40px;
+                    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{title}</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.5;height:55px;
+                    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">{description}</div>
+                <div style="margin-top:10px;font-size:0.72rem;color:var(--primary);
+                    font-weight:600;display:flex;align-items:center;gap:4px;">
+                    {svg_icon("link", 12, "#B71C1C")} Read more
+                </div>
+            </div>
+        </div>
+        </a>""", unsafe_allow_html=True)
 
 def render():
     inject_css()
@@ -156,61 +151,54 @@ def render():
 
     if not _get_api_key():
         st.info(
-            "🌐 **Live news** requires a free NewsAPI key — add `NEWSAPI_KEY=your_key` to `.env`. "
+            f"{svg_icon('globe', 14, '#1565C0')} &nbsp;"
+            "**Live news** requires a free NewsAPI key — add `NEWSAPI_KEY=your_key` to `.env`. "
             "Get one free at [newsapi.org](https://newsapi.org). Showing curated links for now."
         )
 
-    # If teams page sent us a team name via session state, pre-fill search
-    _preset = st.session_state.pop("news_query", None)
+    if "news_topic_select" not in st.session_state:
+        st.session_state.news_topic_select = "All World Cup"
 
-    col_search, col_cat, col_refresh = st.columns([2, 2, 1])
-    with col_search:
-        team_search = st.text_input(
-            "Search team",
-            value=_preset or "",
-            placeholder="e.g. Brazil, Morocco…",
-            label_visibility="collapsed",
-        )
+    target_team = st.session_state.pop("news_search_query", None)
+    if target_team:
+        st.session_state.news_topic_select = target_team
+
+    current_topic = st.session_state.news_topic_select
+    if current_topic not in CATEGORIES:
+        CATEGORIES[current_topic] = (f'{current_topic} "World Cup" football', [current_topic.lower()])
+
+    col_cat, col_refresh = st.columns([4, 1])
     with col_cat:
-        category = st.selectbox(
-            "Topic",
-            options=list(CATEGORIES.keys()),
-            label_visibility="collapsed",
-            disabled=bool(team_search),
-        )
+        category = st.selectbox("Topic", options=list(CATEGORIES.keys()), key="news_topic_select", label_visibility="collapsed")
     with col_refresh:
         if st.button("↺ Refresh", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
 
-    if team_search:
-        query        = f"{team_search} soccer football"
-        required_kws = []
-    else:
-        query, required_kws = CATEGORIES[category]
+    query, required_kws = CATEGORIES[category]
 
-    with st.spinner("A carregar notícias…"):
+    with st.spinner("Loading news..."):
         raw_articles = _fetch_news(query)
 
     if not raw_articles:
         articles = STATIC_ARTICLES
         st.markdown(
             f'<p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:16px;">'
-            f'{svg_icon("clock", 13, "#B8960C")} Links curados — adiciona NEWSAPI_KEY para notícias ao vivo</p>',
+            f'{svg_icon("clock", 13, "#B8960C")} Curated links — add NEWSAPI_KEY for live news</p>',
             unsafe_allow_html=True)
     else:
         articles = [a for a in raw_articles if _is_relevant(a, required_kws)][:12]
         if articles:
             st.markdown(
                 f'<p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:16px;">'
-                f'{svg_icon("check", 13, "#2E7D32")} {len(articles)} artigos · '
-                f'Tópico: <strong style="color:var(--text);">{category}</strong></p>',
+                f'{svg_icon("check", 13, "#2E7D32")} {len(articles)} articles · '
+                f'Topic: <strong style="color:var(--text);">{category}</strong></p>',
                 unsafe_allow_html=True)
         else:
             st.markdown(
                 f'<p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:16px;">'
-                f'{svg_icon("x", 13, "#B8960C")} Sem notícias de futebol sobre '
-                f'<strong style="color:var(--text);">{category}</strong> nos últimos 7 dias.</p>',
+                f'{svg_icon("x", 13, "#B8960C")} No football news for '
+                f'<strong style="color:var(--text);">{category}</strong> in the last 7 days.</p>',
                 unsafe_allow_html=True)
 
     cols = st.columns(3)
@@ -221,5 +209,5 @@ def render():
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(
         '<div style="text-align:center;color:var(--text-dim);font-size:0.75rem;">'
-        'Artigos abrem em nova aba · NewsAPI · Filtradas por relevância</div>',
+        'Articles open in new tab · NewsAPI · Filtered for relevance</div>',
         unsafe_allow_html=True)
