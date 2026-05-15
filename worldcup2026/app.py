@@ -47,8 +47,6 @@ st.set_page_config(
 
 # ── Force dark mode (override OS / browser light theme) + hide chrome ─
 st.markdown("""
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0B0D11">
 <style>
 :root { color-scheme: dark !important; }
 html, body, [data-testid="stApp"] {
