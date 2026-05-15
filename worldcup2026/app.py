@@ -52,7 +52,15 @@ st.set_page_config(
 st.markdown("""
 <style>
 #MainMenu {visibility: hidden !important;}
-header[data-testid="stHeader"] {display: none !important;}
+/* Keep the header element so the sidebar expand button can render in it,
+   but make it transparent and only show the collapse control inside. */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    height: auto !important;
+}
+header[data-testid="stHeader"] > div:not(:has([data-testid="stSidebarCollapsedControl"])):not(:has([data-testid="collapsedControl"])) {
+    display: none !important;
+}
 footer {visibility: hidden !important;}
 [data-testid="stToolbar"] {display: none !important;}
 [data-testid="stDecoration"] {display: none !important;}
