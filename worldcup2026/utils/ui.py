@@ -65,13 +65,21 @@ html, body,
     }
 }
 
-/* Hide all Streamlit chrome */
-#MainMenu, header[data-testid="stHeader"], footer,
-[data-testid="stToolbar"], [data-testid="stDecoration"],
-[data-testid="stStatusWidget"], .viewerBadge_container__1QSob,
-button[title="View fullscreen"] {
+/* Hide non-essential Streamlit chrome — do NOT hide stHeader or stToolbar
+   because the sidebar expand button lives inside them. */
+#MainMenu, footer,
+[data-testid="stDecoration"], [data-testid="stStatusWidget"],
+.viewerBadge_container__1QSob, button[title="View fullscreen"],
+[data-testid="stToolbarActions"], [data-testid="stDeployButton"] {
     display: none !important;
     visibility: hidden !important;
+}
+/* Keep header + toolbar visible (host the sidebar expand button) */
+header[data-testid="stHeader"],
+[data-testid="stToolbar"] {
+    display: flex !important;
+    visibility: visible !important;
+    background: transparent !important;
 }
 
 /* Sidebar collapse toggle — always visible */
